@@ -41,6 +41,16 @@ const toLocalDateStr = (d: Date): string => {
   return `${y}-${m}-${day}`;
 };
 
+// Converts a stored ISO check-in/check-out timestamp to a short local
+// clock time for display, e.g. "11:35 AM". Returns null for anything
+// missing or unparseable rather than showing a raw ISO string.
+const formatClockTime = (iso?: string): string | null => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
+
 interface DailyEntry {
   date: string;
   basicHours: number;
@@ -50,6 +60,8 @@ interface DailyEntry {
   holidayName?: string;
   source: 'record' | 'holidayFill' | 'idle' | 'off';
   projectLabel: string; // project name, 'Idle', or '—' for unassigned days
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 interface ProjectSummaryRow {
@@ -221,6 +233,8 @@ export default function Payslip() {
               holidayName: rec.holidayName || '',
               source: 'record',
               projectLabel: projLabel,
+              checkInTime: rec.checkInTime,
+              checkOutTime: rec.checkOutTime,
             });
           } else if (holName) {
             entries.push({
@@ -410,44 +424,58 @@ export default function Payslip() {
                   <th style={thStyle}>Project</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>Basic Hrs</th>
                   <th style={{ ...thStyle, textAlign: 'right' }}>OT Hrs</th>
+                  <th style={thStyle}>Time In/Out</th>
                   <th style={thStyle}>Note</th>
                 </tr>
               </thead>
               <tbody>
-                {dailyEntries.map((e) => (
-                  <tr key={e.date} style={{ borderBottom: '1px solid #eee' }}>
-                    <td style={tdStyle}>{e.date}</td>
-                    <td style={tdStyle}>{e.projectLabel}</td>
-                    <td style={{ ...tdStyle, textAlign: 'right' }}>
-                      {e.status === 'absent' ? '-' : e.basicHours}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'right' }}>
-                      {e.status === 'absent' ? '-' : e.otHours}
-                    </td>
-                    <td
-                      style={{
-                        ...tdStyle,
-                        color:
-                          e.status === 'absent'
-                            ? '#dc2626'
-                            : e.source === 'off'
-                            ? '#999'
-                            : 'inherit',
-                        fontWeight: e.status === 'absent' ? 'bold' : 'normal',
-                      }}
+                {dailyEntries.map((e) => {
+                  const inTime = formatClockTime(e.checkInTime);
+                  const outTime = formatClockTime(e.checkOutTime);
+                  return (
+                    <tr
+                      key={e.date}
+                      style={{ borderBottom: '1px solid #eee' }}
                     >
-                      {e.status === 'absent'
-                        ? 'Absent'
-                        : e.source === 'idle'
-                        ? 'Idle Pool'
-                        : e.source === 'holidayFill' || e.isHoliday
-                        ? `Holiday - ${e.holidayName}`
-                        : e.source === 'off'
-                        ? '—'
-                        : ''}
-                    </td>
-                  </tr>
-                ))}
+                      <td style={tdStyle}>{e.date}</td>
+                      <td style={tdStyle}>{e.projectLabel}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        {e.status === 'absent' ? '-' : e.basicHours}
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        {e.status === 'absent' ? '-' : e.otHours}
+                      </td>
+                      <td style={{ ...tdStyle, fontSize: 12, color: '#555' }}>
+                        {inTime
+                          ? `${inTime} → ${outTime || 'still in'}`
+                          : '—'}
+                      </td>
+                      <td
+                        style={{
+                          ...tdStyle,
+                          color:
+                            e.status === 'absent'
+                              ? '#dc2626'
+                              : e.source === 'off'
+                              ? '#999'
+                              : 'inherit',
+                          fontWeight:
+                            e.status === 'absent' ? 'bold' : 'normal',
+                        }}
+                      >
+                        {e.status === 'absent'
+                          ? 'Absent'
+                          : e.source === 'idle'
+                          ? 'Idle Pool'
+                          : e.source === 'holidayFill' || e.isHoliday
+                          ? `Holiday - ${e.holidayName}`
+                          : e.source === 'off'
+                          ? '—'
+                          : ''}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
