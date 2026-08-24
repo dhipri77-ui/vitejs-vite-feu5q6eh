@@ -1,0 +1,157 @@
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../firebase';
+import { resolveUserRole } from '../lib/userRole';
+import type { UserRole } from '../lib/userRole';
+
+interface LinkDef {
+  to: string;
+  label: string;
+}
+
+const allLinks: LinkDef[] = [
+  { to: '/dashboard', label: 'Dashboard' },
+  { to: '/project-admin', label: 'Project & Admin' },
+  { to: '/subcontractor-log', label: 'Subcontractor Log' },
+  { to: '/idle-pool', label: 'Idle Pool' },
+  { to: '/hr', label: 'HR' },
+  { to: '/attendance-log', label: 'Daily Attendance Log' },
+  { to: '/attendance-summary', label: 'Daily Attendance Summary' },
+  {
+    to: '/master-attendance-summary',
+    label: 'Daily Attendance Summary (All Projects)',
+  },
+  { to: '/man-hours-summary', label: 'Man Hours Summary' },
+  { to: '/master-salary-payslip', label: 'Salary & Pay Slip' },
+  { to: '/payslip-summary', label: 'Payslip Summary' },
+  { to: '/settings', label: 'Settings' },
+];
+
+// Which link paths each role is allowed to see. Master sees everything
+// (handled separately below, skips this map entirely).
+const roleLinkPaths: { [role: string]: string[] } = {
+  pm: [
+    '/dashboard',
+    '/project-admin',
+    '/subcontractor-log',
+    '/idle-pool',
+    '/attendance-log',
+    '/attendance-summary',
+    '/man-hours-summary',
+  ],
+  hr: ['/hr', '/idle-pool'],
+  accountant: [
+    '/master-salary-payslip',
+    '/payslip-summary',
+    '/master-attendance-summary',
+  ],
+};
+
+const getVisibleLinks = (role: UserRole | null): LinkDef[] => {
+  if (!role) return [];
+  if (role.type === 'master') return allLinks;
+  if (role.type === 'unknown') return [];
+  const allowedPaths = roleLinkPaths[role.type] || [];
+  return allLinks.filter((link) => allowedPaths.includes(link.to));
+};
+
+export default function Sidebar() {
+  const navigate = useNavigate();
+  const [role, setRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user?.email) {
+        const resolved = await resolveUserRole(user.email);
+        setRole(resolved);
+      } else {
+        setRole(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate('/');
+  };
+
+  const visibleLinks = getVisibleLinks(role);
+
+  return (
+    <div style={styles.sidebar}>
+      <div style={styles.logo}>
+        <div style={styles.companyName}>Airmech W.L.L</div>
+        <div style={styles.appName}>Manpower Mgmt</div>
+      </div>
+      {visibleLinks.map((link) => (
+        <NavLink
+          key={link.to}
+          to={link.to}
+          style={({ isActive }) => ({
+            ...styles.link,
+            background: isActive ? '#2563eb' : 'transparent',
+            color: isActive ? '#fff' : '#333',
+          })}
+        >
+          {link.label}
+        </NavLink>
+      ))}
+      <button onClick={handleLogout} style={styles.logoutButton}>
+        Log Out
+      </button>
+    </div>
+  );
+}
+
+const FONT_STACK = "'Poppins', 'Segoe UI', Arial, sans-serif";
+
+const styles: { [key: string]: React.CSSProperties } = {
+  sidebar: {
+    width: '220px',
+    height: '100vh',
+    background: '#f4f6f8',
+    borderRight: '1px solid #ddd',
+    fontFamily: FONT_STACK,
+    display: 'flex',
+    flexDirection: 'column',
+    paddingTop: '10px',
+  },
+  logo: {
+    padding: '16px',
+    borderBottom: '1px solid #ddd',
+    marginBottom: '10px',
+  },
+  companyName: {
+    fontWeight: 800,
+    fontSize: '16px',
+    color: '#0d9488',
+  },
+  appName: {
+    fontWeight: 600,
+    fontSize: '13px',
+    color: '#64748b',
+    marginTop: '2px',
+  },
+  link: {
+    padding: '12px 16px',
+    textDecoration: 'none',
+    fontSize: '14px',
+    borderRadius: '6px',
+    margin: '2px 10px',
+  },
+  logoutButton: {
+    marginTop: 'auto',
+    marginBottom: '16px',
+    marginLeft: '10px',
+    marginRight: '10px',
+    padding: '10px 16px',
+    background: '#dc2626',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    cursor: 'pointer',
+  },
+};
