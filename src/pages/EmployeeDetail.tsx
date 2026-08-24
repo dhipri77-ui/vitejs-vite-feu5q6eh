@@ -25,6 +25,7 @@ interface Employee {
   payType: string;
   otMultiplier: number;
   joiningDate: string;
+  mobile?: string;
   address?: string;
   phone?: string;
   email?: string;
@@ -231,6 +232,27 @@ export default function EmployeeDetail() {
           {saveError}
         </p>
       )}
+
+      {/* WORKER LOGIN — always read-only, regardless of edit mode. Editing
+          "mobile" here would only change the HR record, not the worker's
+          actual Firebase Auth password, so it's never made editable on
+          this page to avoid the two silently drifting out of sync. */}
+      <h3 style={sectionTitleStyle}>Worker Login</h3>
+      <div style={gridStyle}>
+        <div>
+          <p style={labelStyle}>Employee Code</p>
+          <p style={valueStyle}>{emp.code || '—'}</p>
+        </div>
+        <div>
+          <p style={labelStyle}>Mobile (login password)</p>
+          <p style={valueStyle}>{emp.mobile || '—'}</p>
+        </div>
+      </div>
+      <p style={loginHintStyle}>
+        This is what the worker enters on the /worker check-in page — the
+        Employee Code as their ID and this Mobile number as their password.
+        It can't be changed from this page.
+      </p>
 
       <h3 style={sectionTitleStyle}>Employment Details</h3>
       <div style={gridStyle}>
@@ -441,6 +463,12 @@ const labelStyle: React.CSSProperties = {
   marginBottom: '3px',
 };
 const valueStyle: React.CSSProperties = { fontSize: '14px', margin: 0 };
+const loginHintStyle: React.CSSProperties = {
+  fontSize: '12px',
+  color: '#888',
+  marginTop: '8px',
+  fontFamily: FONT_STACK,
+};
 const inputStyle: React.CSSProperties = {
   padding: '6px',
   borderRadius: '5px',
