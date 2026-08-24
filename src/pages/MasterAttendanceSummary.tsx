@@ -16,6 +16,8 @@ interface AttendanceRecord {
   basicHours: number;
   otHours: number;
   totalHours: number;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 interface EmployeeSummary {
@@ -25,6 +27,12 @@ interface EmployeeSummary {
   totalBasic: number;
   totalOt: number;
   totalHours: number;
+  // Only meaningful/shown in Daily view - see AttendanceSummary.tsx for
+  // why (exactly one record per employee per day, so unambiguous there;
+  // in aggregate views this would just be whichever record processed
+  // last, so it's deliberately not shown outside Daily).
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 type ViewMode = 'daily' | 'weekly' | 'monthly' | 'custom';
@@ -36,6 +44,28 @@ const formatDate = (isoDate?: string): string => {
   if (parts.length !== 3) return isoDate;
   const [year, month, day] = parts;
   return `${day}/${month}/${year}`;
+};
+
+// Converts a stored ISO check-in/check-out timestamp to a short local
+// clock time for display, e.g. "11:35 AM". Returns null for anything
+// missing or unparseable rather than showing a raw ISO string.
+const formatClockTime = (iso?: string): string | null => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
+
+// Converts a decimal hours value (e.g. 2.82) to a "Xh Ym" display string
+// (e.g. "2h 49m"). Rounds to the nearest minute. Shows just "Ym" for
+// anything under an hour, and "0m" for exactly zero.
+const formatHoursMinutes = (hours: number): string => {
+  const totalMinutes = Math.round((hours || 0) * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 };
 
 const todayStr = () => new Date().toISOString().split('T')[0];
@@ -138,6 +168,10 @@ export default function MasterAttendanceSummary() {
         map[r.employeeCode].totalBasic += r.basicHours || 0;
         map[r.employeeCode].totalOt += r.otHours || 0;
         map[r.employeeCode].totalHours += r.totalHours || 0;
+        // Daily view's date range is a single day, so there's at most one
+        // matching record per employee - safe to just set these directly.
+        map[r.employeeCode].checkInTime = r.checkInTime;
+        map[r.employeeCode].checkOutTime = r.checkOutTime;
       }
     });
 
@@ -330,19 +364,41 @@ export default function MasterAttendanceSummary() {
                         </tr>
                       </thead>
                       <tbody>
-                        {summaries.map((s) => (
-                          <tr
-                            key={s.code}
-                            style={{ borderBottom: '1px solid #bfdbfe' }}
-                          >
-                            <td style={tdStyle}>{s.code}</td>
-                            <td style={tdStyle}>{s.name}</td>
-                            <td style={tdStyle}>{s.daysPresent}</td>
-                            <td style={tdStyle}>{s.totalBasic}</td>
-                            <td style={tdStyle}>{s.totalOt}</td>
-                            <td style={tdStyle}>{s.totalHours}</td>
-                          </tr>
-                        ))}
+                        {summaries.map((s) => {
+                          const inTime =
+                            viewMode === 'daily'
+                              ? formatClockTime(s.checkInTime)
+                              : null;
+                          const outTime =
+                            viewMode === 'daily'
+                              ? formatClockTime(s.checkOutTime)
+                              : null;
+                          return (
+                            <tr
+                              key={s.code}
+                              style={{ borderBottom: '1px solid #bfdbfe' }}
+                            >
+                              <td style={tdStyle}>{s.code}</td>
+                              <td style={tdStyle}>{s.name}</td>
+                              <td style={tdStyle}>{s.daysPresent}</td>
+                              <td style={tdStyle}>
+                                {formatHoursMinutes(s.totalBasic)}
+                              </td>
+                              <td style={tdStyle}>
+                                {formatHoursMinutes(s.totalOt)}
+                              </td>
+                              <td style={tdStyle}>
+                                {formatHoursMinutes(s.totalHours)}
+                                {inTime && (
+                                  <span style={timeBracketStyle}>
+                                    {' '}
+                                    ({inTime} → {outTime || 'still in'})
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   )}
@@ -446,3 +502,7 @@ const thStyle: React.CSSProperties = {
   color: '#1e3a8a',
 };
 const tdStyle: React.CSSProperties = { padding: '10px 8px', fontSize: '15px' };
+const timeBracketStyle: React.CSSProperties = {
+  fontSize: '12px',
+  color: '#64748b',
+};

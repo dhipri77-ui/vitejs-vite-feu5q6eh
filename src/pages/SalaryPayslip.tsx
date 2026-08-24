@@ -58,6 +58,18 @@ const formatDate = (isoDate?: string): string => {
   return `${day}/${month}/${year}`;
 };
 
+// Converts a decimal hours value (e.g. 2.82) to a "Xh Ym" display string
+// (e.g. "2h 49m"). Rounds to the nearest minute. Shows just "Ym" for
+// anything under an hour, and "0m" for exactly zero.
+const formatHoursMinutes = (hours: number): string => {
+  const totalMinutes = Math.round((hours || 0) * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
+
 const getMonthRange = () => {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -631,8 +643,8 @@ export default function SalaryPayslip() {
                     <td style={tdStyle}>{r.department}</td>
                     <td style={tdStyle}>{r.position}</td>
                     <td style={tdStyle}>{r.daysPresent}</td>
-                    <td style={tdStyle}>{r.basicHours}</td>
-                    <td style={tdStyle}>{r.otHours}</td>
+                    <td style={tdStyle}>{formatHoursMinutes(r.basicHours)}</td>
+                    <td style={tdStyle}>{formatHoursMinutes(r.otHours)}</td>
                     <td style={tdStyle}>{r.basicPay.toFixed(2)}</td>
                     <td style={tdStyle}>{r.otPay.toFixed(2)}</td>
                     <td style={{ ...tdStyle, fontWeight: 700 }}>

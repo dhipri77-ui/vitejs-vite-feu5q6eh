@@ -35,6 +35,18 @@ const formatDate = (isoDate?: string): string => {
   return `${day}/${month}/${year}`;
 };
 
+// Converts a decimal hours value (e.g. 2.82) to a "Xh Ym" display string
+// (e.g. "2h 49m"). Rounds to the nearest minute. Shows just "Ym" for
+// anything under an hour, and "0m" for exactly zero.
+const formatHoursMinutes = (hours: number): string => {
+  const totalMinutes = Math.round((hours || 0) * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
+
 export default function Dashboard() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -205,21 +217,25 @@ export default function Dashboard() {
           <h3 style={cardTitleStyle}>Man Hours</h3>
           <div style={rowStyle}>
             <span>Assumed Man Hours</span>
-            <strong style={figureStyle}>{project.assumedManHours}</strong>
+            <strong style={figureStyle}>
+              {formatHoursMinutes(project.assumedManHours)}
+            </strong>
           </div>
           <div style={rowStyle}>
             <span>Airmech (Own) Man Hours</span>
-            <strong>{ownManHours}</strong>
+            <strong>{formatHoursMinutes(ownManHours)}</strong>
           </div>
           {subTotals.map((s) => (
             <div style={rowStyle} key={s.companyName}>
               <span>{s.companyName} Man Hours</span>
-              <strong>{s.manHours}</strong>
+              <strong>{formatHoursMinutes(s.manHours)}</strong>
             </div>
           ))}
           <div style={totalRowStyle}>
             <span>Total Man Hours</span>
-            <strong style={figureStyle}>{totalManHours}</strong>
+            <strong style={figureStyle}>
+              {formatHoursMinutes(totalManHours)}
+            </strong>
           </div>
         </div>
 

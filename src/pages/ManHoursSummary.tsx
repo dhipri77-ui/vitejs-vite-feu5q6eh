@@ -52,6 +52,18 @@ const elapsedPercent = (start: string, end: string): number => {
   return ((now - s) / (e - s)) * 100;
 };
 
+// Converts a decimal hours value (e.g. 2.82) to a "Xh Ym" display string
+// (e.g. "2h 49m"). Rounds to the nearest minute. Shows just "Ym" for
+// anything under an hour, and "0m" for exactly zero.
+const formatHoursMinutes = (hours: number): string => {
+  const totalMinutes = Math.round((hours || 0) * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+};
+
 export default function ManHoursSummary() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
@@ -211,15 +223,19 @@ export default function ManHoursSummary() {
       <div style={bluePanelStyle}>
         <div style={statRowStyle}>
           <span>Assumed Man Hours</span>
-          <span style={statValueStyle}>{project.assumedManHours}</span>
+          <span style={statValueStyle}>
+            {formatHoursMinutes(project.assumedManHours)}
+          </span>
         </div>
         <div style={statRowStyle}>
           <span>Company Employees</span>
-          <span style={statValueStyle}>{usedTotal} hrs</span>
+          <span style={statValueStyle}>{formatHoursMinutes(usedTotal)}</span>
         </div>
         <div style={statRowStyle}>
           <span>Subcontractors</span>
-          <span style={statValueStyle}>{subGrandTotal} hrs</span>
+          <span style={statValueStyle}>
+            {formatHoursMinutes(subGrandTotal)}
+          </span>
         </div>
         <div
           style={{
@@ -231,7 +247,7 @@ export default function ManHoursSummary() {
         >
           <span style={{ fontWeight: 700 }}>Total Used</span>
           <span style={{ ...statValueStyle, fontSize: '20px' }}>
-            {combinedTotal} hrs ({usedPercent.toFixed(1)}%)
+            {formatHoursMinutes(combinedTotal)} ({usedPercent.toFixed(1)}%)
           </span>
         </div>
         <p style={timeLineStyle}>
@@ -279,18 +295,24 @@ export default function ManHoursSummary() {
               <div style={bluePanelStyle}>
                 <div style={statRowStyle}>
                   <span>Assumed Man Hours</span>
-                  <span style={statValueStyle}>{d.assumedManHours}</span>
+                  <span style={statValueStyle}>
+                    {formatHoursMinutes(d.assumedManHours)}
+                  </span>
                 </div>
                 <div style={statRowStyle}>
                   <span>Company Employees</span>
-                  <span style={statValueStyle}>{employeeUsed} hrs</span>
+                  <span style={statValueStyle}>
+                    {formatHoursMinutes(employeeUsed)}
+                  </span>
                 </div>
                 {deptSubs.length > 0 && (
                   <div style={{ margin: '4px 0' }}>
                     {deptSubs.map((s) => (
                       <div key={s.id} style={subRowStyle}>
                         <span>{s.companyName}</span>
-                        <span>{subHoursById[s.id] || 0} hrs</span>
+                        <span>
+                          {formatHoursMinutes(subHoursById[s.id] || 0)}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -305,7 +327,7 @@ export default function ManHoursSummary() {
                 >
                   <span style={{ fontWeight: 700 }}>Total Used</span>
                   <span style={{ ...statValueStyle, fontSize: '18px' }}>
-                    {deptCombinedUsed} hrs ({pct.toFixed(1)}%)
+                    {formatHoursMinutes(deptCombinedUsed)} ({pct.toFixed(1)}%)
                   </span>
                 </div>
                 <p
@@ -326,7 +348,8 @@ export default function ManHoursSummary() {
 
       {usedNoDept > 0 && (
         <p style={{ fontSize: '13px', color: '#888', marginTop: '20px' }}>
-          {usedNoDept} hrs logged by employees not assigned to any department.
+          {formatHoursMinutes(usedNoDept)} logged by employees not assigned to
+          any department.
         </p>
       )}
     </div>
