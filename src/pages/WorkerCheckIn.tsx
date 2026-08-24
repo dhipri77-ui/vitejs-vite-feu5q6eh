@@ -30,14 +30,15 @@ const today = () => new Date().toISOString().split('T')[0];
 const DEVICE_ID_KEY = 'workerDeviceId';
 
 function getOrCreateDeviceId(): string {
-  let id = localStorage.getItem(DEVICE_ID_KEY);
-  if (!id) {
-    id =
-      (crypto as any).randomUUID?.() ??
-      `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    localStorage.setItem(DEVICE_ID_KEY, id);
+  const existing = localStorage.getItem(DEVICE_ID_KEY);
+  if (existing) {
+    return existing;
   }
-  return id;
+  const newId: string =
+    (crypto as any).randomUUID?.() ??
+    `dev-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem(DEVICE_ID_KEY, newId);
+  return newId;
 }
 
 /**
