@@ -7,6 +7,7 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  setDoc,
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { initializeApp, deleteApp } from 'firebase/app';
@@ -223,7 +224,10 @@ export default function Settings() {
     }
     try {
       await createStaffLogin(hrEmail, hrPassword);
-      await addDoc(collection(db, 'staffRoles'), {
+      // Document ID MUST be the email address itself - the app's security
+      // rules and role-lookup logic both key off this. Do not switch this
+      // back to addDoc()/auto-ID, it silently breaks that login's access.
+      await setDoc(doc(db, 'staffRoles', hrEmail), {
         email: hrEmail,
         role: 'hr',
       });
@@ -245,7 +249,8 @@ export default function Settings() {
     }
     try {
       await createStaffLogin(acctEmail, acctPassword);
-      await addDoc(collection(db, 'staffRoles'), {
+      // Same rule as HR above: document ID must equal the email address.
+      await setDoc(doc(db, 'staffRoles', acctEmail), {
         email: acctEmail,
         role: 'accountant',
       });
